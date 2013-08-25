@@ -5,6 +5,8 @@ use warnings;
 sub fileinfo_post_remove {
     my ( $cb, $obj, $original ) = @_;
 
+    return unless MT->config('DeleteFilesAtRebuild');
+
     require MT::FileMgr;
     my $fmgr = MT::FileMgr->new('Local');
 
@@ -17,12 +19,16 @@ sub fileinfo_post_remove {
 sub blog_post_remove {
     my ( $cb, $obj, $original ) = @_;
 
+    return unless MT->config('DeleteFilesAtRebuild');
+
     require File::Path;
     File::Path::rmtree( $obj->site_path );
 }
 
 sub category_post_remove {
     my ( $cb, $obj, $original ) = @_;
+
+    return unless MT->config('DeleteFilesAtRebuild');
 
     require File::Spec;
     my $category_path = File::Spec->catdir(
