@@ -6,25 +6,49 @@ sub init_app {
     require MT::FileMgr::Local;
     require MT::CMS::Entry;
     my $build_entry_preview = \&MT::CMS::Entry::_build_entry_preview;
+    require MT::CMS::Template;
+    my $preview = \&MT::CMS::Template::preview;
 
+    # Save preview content temporarily without publish temporary file.
     no warnings 'redefine';
+
     *MT::CMS::Entry::_build_entry_preview = sub {
         my ( $app, $entry ) = @_;
 
-        # Save preview content temporarily without publish temporary file.
         no warnings 'redefine';
         local *MT::FileMgr::Local::put_data = sub {
-            $app->request( 'preview_content', $_[1] );
+            $app->request( 'entry_preview_content', $_[1] );
         };
 
         $build_entry_preview->( $app, $entry );
+    };
+
+    *MT::CMS::Template::preview = sub {
+        my $app = shift;
+
+        no warnings 'redefine';
+        local *MT::FileMgr::Local::put_data = sub {
+            $app->request( 'tmpl_preview_content', $_[1] );
+        };
+
+        $preview->($app);
     };
 }
 
 sub tmpl_out_preview_strip {
     my ( $cb, $app, $tmpl ) = @_;
+    _insert_preview_content( $app, $tmpl, 'entry_preview_content' );
+}
 
-    my $preview_content = $app->request('preview_content');
+sub tmpl_out_preview_tmpl_strip {
+    my ( $cb, $app, $tmpl ) = @_;
+    _insert_preview_content( $app, $tmpl, 'tmpl_preview_content' );
+}
+
+sub _insert_preview_content {
+    my ( $app, $tmpl, $cache_key ) = @_;
+
+    my $preview_content = $app->request($cache_key);
     return unless $preview_content;
 
     # http://www.tagindex.com/html5/embed/iframe_srcdoc.html
@@ -38,7 +62,7 @@ sub tmpl_out_preview_strip {
     $$tmpl =~ s/($after)/$insert$1/;
 
     # Clear request cache just in case.
-    $app->request( 'preview_content', undef );
+    $app->request( $cache_key, undef );
 }
 
 sub fileinfo_post_remove {

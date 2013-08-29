@@ -10,6 +10,7 @@ applications:
         callbacks:
             init_app: $CleanSite::CleanSite::Callback::init_app
             template_output.preview_strip: $CleanSite::CleanSite::Callback::tmpl_out_preview_strip
+            template_output.preview_template_strip: $CleanSite::CleanSite::Callback::tmpl_out_preview_tmpl_strip
 
 callbacks:
     MT::FileInfo::post_remove: $CleanSite::CleanSite::Callback::fileinfo_post_remove
