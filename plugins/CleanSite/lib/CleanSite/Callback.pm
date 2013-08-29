@@ -2,6 +2,45 @@ package CleanSite::Callback;
 use strict;
 use warnings;
 
+sub init_app {
+    require MT::FileMgr::Local;
+    require MT::CMS::Entry;
+    my $build_entry_preview = \&MT::CMS::Entry::_build_entry_preview;
+
+    no warnings 'redefine';
+    *MT::CMS::Entry::_build_entry_preview = sub {
+        my ( $app, $entry ) = @_;
+
+        # Save preview content temporarily without publish temporary file.
+        no warnings 'redefine';
+        local *MT::FileMgr::Local::put_data = sub {
+            $app->request( 'preview_content', $_[1] );
+        };
+
+        $build_entry_preview->( $app, $entry );
+    };
+}
+
+sub tmpl_out_preview_strip {
+    my ( $cb, $app, $tmpl ) = @_;
+
+    my $preview_content = $app->request('preview_content');
+    return unless $preview_content;
+
+    # http://www.tagindex.com/html5/embed/iframe_srcdoc.html
+    $preview_content =~ s/&/&amp;/gs;
+    $preview_content =~ s/"/&quot;/gs;
+
+    # Insert preview content.
+    # TODO: remove src attribute.
+    my $after  = quotemeta('></iframe>');
+    my $insert = ' srcdoc="' . $preview_content . '"';
+    $$tmpl =~ s/($after)/$insert$1/;
+
+    # Clear request cache just in case.
+    $app->request( 'preview_content', undef );
+}
+
 sub fileinfo_post_remove {
     my ( $cb, $obj, $original ) = @_;
 
