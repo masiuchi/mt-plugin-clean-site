@@ -2,8 +2,73 @@ package CleanSite::Callback;
 use strict;
 use warnings;
 
+sub init_app {
+    require MT::FileMgr::Local;
+    require MT::CMS::Entry;
+    my $build_entry_preview = \&MT::CMS::Entry::_build_entry_preview;
+    require MT::CMS::Template;
+    my $preview = \&MT::CMS::Template::preview;
+
+    # Save preview content temporarily without publish temporary file.
+    no warnings 'redefine';
+
+    *MT::CMS::Entry::_build_entry_preview = sub {
+        my ( $app, $entry ) = @_;
+
+        no warnings 'redefine';
+        local *MT::FileMgr::Local::put_data = sub {
+            $app->request( 'entry_preview_content', $_[1] );
+        };
+
+        $build_entry_preview->( $app, $entry );
+    };
+
+    *MT::CMS::Template::preview = sub {
+        my $app = shift;
+
+        no warnings 'redefine';
+        local *MT::FileMgr::Local::put_data = sub {
+            $app->request( 'tmpl_preview_content', $_[1] );
+        };
+
+        $preview->($app);
+    };
+}
+
+sub tmpl_out_preview_strip {
+    my ( $cb, $app, $tmpl ) = @_;
+    _insert_preview_content( $app, $tmpl, 'entry_preview_content' );
+}
+
+sub tmpl_out_preview_tmpl_strip {
+    my ( $cb, $app, $tmpl ) = @_;
+    _insert_preview_content( $app, $tmpl, 'tmpl_preview_content' );
+}
+
+sub _insert_preview_content {
+    my ( $app, $tmpl, $cache_key ) = @_;
+
+    my $preview_content = $app->request($cache_key);
+    return unless $preview_content;
+
+    # http://www.tagindex.com/html5/embed/iframe_srcdoc.html
+    $preview_content =~ s/&/&amp;/gs;
+    $preview_content =~ s/"/&quot;/gs;
+
+    # Insert preview content.
+    # TODO: remove src attribute.
+    my $after  = quotemeta('></iframe>');
+    my $insert = ' srcdoc="' . $preview_content . '"';
+    $$tmpl =~ s/($after)/$insert$1/;
+
+    # Clear request cache just in case.
+    $app->request( $cache_key, undef );
+}
+
 sub fileinfo_post_remove {
     my ( $cb, $obj, $original ) = @_;
+
+    return unless MT->config('DeleteFilesAtRebuild');
 
     require MT::FileMgr;
     my $fmgr = MT::FileMgr->new('Local');
@@ -17,12 +82,16 @@ sub fileinfo_post_remove {
 sub blog_post_remove {
     my ( $cb, $obj, $original ) = @_;
 
+    return unless MT->config('DeleteFilesAtRebuild');
+
     require File::Path;
     File::Path::rmtree( $obj->site_path );
 }
 
 sub category_post_remove {
     my ( $cb, $obj, $original ) = @_;
+
+    return unless MT->config('DeleteFilesAtRebuild');
 
     require File::Spec;
     my $category_path = File::Spec->catdir(
