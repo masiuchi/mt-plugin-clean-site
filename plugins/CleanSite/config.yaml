@@ -10,6 +10,8 @@ applications:
     cms:
         callbacks:
             init_app: $CleanSite::CleanSite::Callback::init_app
+            template_source.preview_strip: $CleanSite::CleanSite::Callback::replace_iframe_tag
+            template_source.preview_template_strip: $CleanSite::CleanSite::Callback::replace_iframe_tag
             template_output.preview_strip: $CleanSite::CleanSite::Callback::tmpl_out_preview_strip
             template_output.preview_template_strip: $CleanSite::CleanSite::Callback::tmpl_out_preview_tmpl_strip
 

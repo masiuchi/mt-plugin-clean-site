@@ -35,6 +35,20 @@ sub init_app {
     };
 }
 
+sub replace_iframe_tag {
+    my ( $cb, $app, $tmpl ) = @_;
+
+    my $before = quotemeta <<'__BEFORE__';
+<iframe id="frame" frameborder="0" scrolling="auto" src="<$mt:var name="preview_url"$>?<mt:date format="%H%M%S">" onclick="return TC.stopEvent(event);"></iframe>
+__BEFORE__
+
+    my $after = <<'__AFTER__';
+<iframe id="frame" frameborder="0" scrolling="auto" onclick="return TC.stopEvent(event);"></iframe>
+__AFTER__
+
+    $$tmpl =~ s/$before/$after/;
+}
+
 sub tmpl_out_preview_strip {
     my ( $cb, $app, $tmpl ) = @_;
     _insert_preview_content( $app, $tmpl, 'entry_preview_content' );
