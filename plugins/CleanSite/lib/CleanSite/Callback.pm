@@ -4,6 +4,8 @@ use warnings;
 
 sub init_app {
     require MT::FileMgr::Local;
+    require MT::App;
+    my $redirect = \&MT::App::redirect;
     require MT::CMS::Entry;
     my $build_entry_preview = \&MT::CMS::Entry::_build_entry_preview;
     require MT::CMS::Template;
@@ -16,6 +18,9 @@ sub init_app {
         my ( $app, $entry ) = @_;
 
         no warnings 'redefine';
+        local *MT::App::redirect = sub {
+            $_[0]->request('entry_preview_content') || $redirect->(@_);
+        };
         local *MT::FileMgr::Local::put_data = sub {
             $app->request( 'entry_preview_content', $_[1] );
         };
@@ -27,6 +32,9 @@ sub init_app {
         my $app = shift;
 
         no warnings 'redefine';
+        local *MT::App::redirect = sub {
+            $_[0]->request('tmpl_preview_content') || $redirect->(@_);
+        };
         local *MT::FileMgr::Local::put_data = sub {
             $app->request( 'tmpl_preview_content', $_[1] );
         };
