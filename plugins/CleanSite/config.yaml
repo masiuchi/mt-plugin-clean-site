@@ -21,3 +21,6 @@ callbacks:
     MT::Website::post_remove: $CleanSite::CleanSite::Callback::blog_post_remove
     MT::Category::post_remove: $CleanSite::CleanSite::Callback::category_post_remove
     MT::Folder::post_remove: $CleanSite::CleanSite::Callback::category_post_remove
+
+    MT::Blog::post_save: $CleanSite::CleanSite::Callback::remove_old_blog
+    MT::Website::post_save: $CleanSite::CleanSite::Callback::remove_old_blog
